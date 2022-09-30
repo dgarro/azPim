@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="button.css">
+    <script src="lib/state-management.js"></script>
+    <script src="lib/resource-builder.js"></script>
+    <script src="popup.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css"
+        integrity="sha512-rSWTr6dChYCbhpHaT1hg2tf4re2jUxBWTuZbujxKg96+T87KQJriMzBzW5aqcb8jmzBhhNSx4XYGA6/Y+ok1vQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+<body class="flex">
+    <div class="header">
+        <h1><span class="off-color">Az</span>Pim</h1>
+    </div>
+    <div class="content-container flex-grow flex center">
+        <div id="pim-container">
+            <div id="resource-info" class="action-container">
+                <div class="target">
+                </div>
+                <div class="type">
+                    Resource
+                </div>
+            </div>
+            <div id="group-info" class="action-container">
+                <div class="target">
+                </div>
+                <div class="type">
+                    Resource Group
+                </div>
+            </div>
+        </div>
+        <div id="loading-container">
+            <div class="flex center">
+                <div class="loading-box">
+                    Loading <span class="pim-loading"></span>     
+                </div>
+            </div>
+        </div>
+        <div id="unavailable-container">
+            <div class="flex center" id="link-azure">
+                <div>
+                    Currently unavailable
+                </div>
+                <a id="open-azure" href="#" href="javascript:void(0)" onclick="openAzure();">Open Azure</a>
+            </div>
+            <div class="flex center" id="viewing-azure">
+                <div>
+                    Waiting to view resource...
+                </div>               
+            </div>
+        </div>
+    </div>
+</body>
+</html>
