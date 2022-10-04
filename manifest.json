@@ -1,17 +1,14 @@
 {
     "name": "azPim",
     "description": "Allows quick access to PIM for Azure Resources",
-    "version": "1.3",
+    "version": "1.4",
     "permissions": [
         "storage",
         "activeTab",
-        "scripting",
         "webRequest"
     ],
     "host_permissions": [
-        "https://*.portal.azure.com/*",
-        "https://management.azure.com/*",
-        "https://api.azrbac.mspim.azure.com/*"
+        "https://*.portal.azure.com/*"
     ],
     "background": {
         "service_worker": "background.js"

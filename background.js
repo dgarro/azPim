@@ -1,5 +1,4 @@
-
-chrome.webRequest.onSendHeaders.addListener(
+browser.webRequest.onSendHeaders.addListener(
     function (info) {
       if (info.requestHeaders) {
         for(var i = 0; i < info.requestHeaders.length; i++) {
@@ -11,7 +10,7 @@ chrome.webRequest.onSendHeaders.addListener(
                 'date': new Date().toLocaleTimeString()
               }
             };
-            chrome.storage.local.set(data);
+            browser.storage.local.set(data);
             break;
           }
         }      
