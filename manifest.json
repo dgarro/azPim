@@ -8,7 +8,9 @@
         "webRequest"
     ],
     "host_permissions": [
-        "https://*.portal.azure.com/*"
+        "https://*.portal.azure.com/*",
+        "https://management.azure.com/*",
+        "https://api.rbac.mspim.azure.com/*"
     ],
     "background": {
         "service_worker": "background.js"

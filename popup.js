@@ -62,7 +62,6 @@
     }
 
     function openAzure() {
-        //chrome.tabs.create({ active: true, url: "https://portal.azure.com" });
         createNewTab("https://portal.azure.com");
     }
 
@@ -90,13 +89,15 @@
     function buildURL(resourceInfo) {
         var type = "";
         if (resourceInfo.type == 'resourcegroup') {
-            var filter = "type eq 'resourcegroup'";
-            type = fixedEncodeURIComponent(filter);
+            type = "type eq 'resourcegroup'";
         } else {
-            var filter = "type ne 'resourcegroup' and type ne 'managementgroup' and type ne 'subscription'";
-            type = fixedEncodeURIComponent(filter);
+            type = "type ne 'resourcegroup' and type ne 'managementgroup' and type ne 'subscription'";
         }
-    let url = `https://api.azrbac.mspim.azure.com/api/v2/privilegedAccess/azureResources/resources?$select=id,displayName,type,externalId&$expand=parent&$filter=((${type})%20and%20(originTenantId%20ne%20%2700000000-0000-0000-0000-000000000000%27)%20and%20(contains(tolower(displayName),%20%27${resourceInfo.name.toLocaleLowerCase()}%27)))&$top=10`;
+    
+        let filter = `(${type}) and (originTenantId ne '00000000-0000-0000-0000-00000000000') and (contains(tolower(displayName),'${resourceInfo.name.toLocaleLowerCase()}'))`;
+        let encodedFilter = fixedEncodeURIComponent(filter);
+
+        let url = `https://api.azrbac.mspim.azure.com/api/v2/privilegedAccess/azureResources/resources?$select=id,displayName,type,externalId&$expand=parent&$filter=(${encodedFilter})&$top=10`;
 
         return url;
     }
