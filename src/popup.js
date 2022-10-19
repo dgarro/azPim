@@ -104,7 +104,7 @@
 
     function loadPimResources(resourceInfo, successCallback, errorCallback) {
 
-        chrome.storage.local.get('tokenObj', function (res) {
+        chrome.storage.session.get('tokenObj', function (res) {
             var url = buildURL(resourceInfo);
             var token = res.tokenObj.token;
 

@@ -9,7 +9,7 @@ chrome.webRequest.onSendHeaders.addListener(
                 'date': new Date().toLocaleTimeString()
               }
             };
-            chrome.storage.local.set(data);
+            chrome.storage.session.set(data);
             break;
           }
         }      

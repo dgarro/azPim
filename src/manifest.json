@@ -7,10 +7,8 @@
         "activeTab",
         "webRequest"
     ],
-    "host_permissions": [
-        "https://*.portal.azure.com/*",
-        "https://management.azure.com/*",
-        "https://api.rbac.mspim.azure.com/*"
+    "host_permissions": [        
+        "https://management.azure.com/*"        
     ],
     "background": {
         "service_worker": "background.js"
