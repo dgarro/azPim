@@ -31,6 +31,12 @@ const StateManagement = (function () {
             }
         }
     }
+
+    function setOverlayMessage(message) {
+        setStateAvailable();
+        setLoading(true);
+        document.querySelector('#loading-container .loading-box').innerHTML = (message);
+    }
     
     function setLoading(state) {
         setVisible('#loading-container', state);
@@ -54,7 +60,8 @@ const StateManagement = (function () {
         setStateAvailable: setStateAvailable,
         setStateUnavailable: setStateUnavailable,
         setLoading: setLoading,
-        setVisible: setVisible 
+        setVisible: setVisible,
+        setOverlayMessage: setOverlayMessage
     };
 
 })();

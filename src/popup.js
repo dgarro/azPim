@@ -2,12 +2,19 @@
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
 
         var parts = ResourceBuilder.build(tab.url);
-
+        
         if (ResourceBuilder.valid(parts)) {
             registerAction("#resource-info", parts?.resource);
             registerAction("#group-info", parts?.group);
 
-            StateManagement.setStateAvailable();
+            // Test that we have a token
+            chrome.storage.session.get('tokenObj', function (res) {
+                if(res.tokenObj?.token == null) {
+                    StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
+                } else {
+                    StateManagement.setStateAvailable();
+                }                
+            });            
         } else {
             StateManagement.setStateUnavailable(tab.url);
         }
