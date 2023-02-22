@@ -1,7 +1,7 @@
 {
     "name": "azPim",
     "description": "Allows quick access to PIM for Azure Resources",
-    "version": "1.5",
+    "version": "2.0",
     "permissions": [
         "storage",
         "activeTab",

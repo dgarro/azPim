@@ -8,14 +8,19 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
         registerAction("#group-info", parts?.group, parts);
 
         // Test that we have a token
-        chrome.storage.session.get('tokenObj', function (res) {
-            if (res.tokenObj?.token == null) {
+        chrome.storage.session.get('authToken', function (res) {            
+            if (res.authToken?.token == null) {
                 StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
             } else {
-                StateManagement.setStateAvailable();
-                StateManagement.setLoading(true);
-                loadGroupResources(parts, evaluateGroups, () => errorCallback(container));
-
+                chrome.storage.session.get('authData', function (res) {
+                    if (res.authData?.tenant == null) {
+                        StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
+                    } else {
+                        StateManagement.setStateAvailable();
+                        StateManagement.setLoading(true);
+                        loadGroupResources(parts, evaluateGroups, () => errorCallback(container));
+                    }
+                });
             }
         });
     } else {
@@ -24,20 +29,18 @@ chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
 });
 
 function evaluateGroups(resp) {
-    console.log("Response => ", resp);
 
     const root = document.querySelector("#pim-container");
     const template = document.getElementById("group-container");
 
-    resp.forEach(element => {
-        console.log(element);
+    resp.filter(GroupFilter.filter).forEach(element => {
         const firstClone = template.content.cloneNode(true);
         const target = firstClone.querySelector(".target");
         target.textContent = element.displayName;
-        const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadGroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
+        const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadgroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
         target.dataset.url = url;
         const type = firstClone.querySelector(".type");
-        type.textContext = element.objectType;
+        type.textContent = element.objectType;
         root.appendChild(firstClone);
     });
 
@@ -191,30 +194,23 @@ function loadObjectsByIds(tenant, altToken, ids) {
 }
 
 function loadGroupResources(data, successCallback, errorCallback) {
-    chrome.storage.session.get('altData', function (res) {
-        console.log("DATA => ", res);
-
-        loadGraphDelegationToken(res.altData)
+    chrome.storage.session.get('authData', function (res) {
+        loadGraphDelegationToken(res.authData)
             .then(response => {
-                console.log("loadGraphDelegationToken => ", response);
-
-                const tenant = res.altData.tenant;
+                const tenant = res.authData.tenant;
                 const altToken = response.value.authHeader;
 
-                chrome.storage.session.get('tokenObj', function (res) {                   
-                    var token = res.tokenObj.token;
+                chrome.storage.session.get('authToken', function (res) {
+                    var token = res.authToken.token;
 
                     loadRoleAssignments(data, token)
                         .then(resp => {
-                            console.log("loadRoleAssignments => ", resp);
                             if (resp.error == undefined) {
-                                console.log("GOT some roles => ", resp);
                                 const ids = resp.value.map(x => x.properties.principalId);
 
                                 loadObjectsByIds(tenant, altToken, ids)
                                     .then(response => {
                                         const results = response.value.map(x => x.displayName);
-                                        console.log(results);
                                         successCallback(response.value);
                                     });
                             } else {
@@ -235,9 +231,9 @@ function loadGroupResources(data, successCallback, errorCallback) {
 
 function loadPimResources(resourceInfo, successCallback, errorCallback) {
 
-    chrome.storage.session.get('tokenObj', function (res) {
+    chrome.storage.session.get('authToken', function (res) {
         var url = buildURL(resourceInfo);
-        var token = res.tokenObj.token;
+        var token = res.authToken.token;
 
         fetch(url, {
             headers: { Authorization: token }

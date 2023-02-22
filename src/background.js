@@ -4,9 +4,8 @@ chrome.webRequest.onSendHeaders.addListener(
       for (var i = 0; i < info.requestHeaders.length; i++) {
         if (info.requestHeaders[i].name?.toLocaleLowerCase() == 'authorization') {
           let data = {
-            'tokenObj': {
-              'token': info.requestHeaders[i].value,
-              'date': new Date().toLocaleTimeString()
+            'authToken': {
+              'token': info.requestHeaders[i].value
             }
           };
           chrome.storage.session.set(data);
@@ -29,7 +28,7 @@ chrome.webRequest.onBeforeRequest.addListener(
     if (info.requestBody) {
       const body = parseRequestBody(info.requestBody);
       let data = {
-        'altData': {
+        'authData': {
           'altPortalAuthorization': body.altPortalAuthorization,
           'portalAuthorization': body.portalAuthorization,
           'tenant': body.tenant
