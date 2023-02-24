@@ -35,18 +35,27 @@ function evaluateGroups(resp) {
 
     resp.filter(GroupFilter.filter).forEach(element => {
         const firstClone = template.content.cloneNode(true);
+        
         const target = firstClone.querySelector(".target");
         target.textContent = element.displayName;
-        const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadgroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
-        target.dataset.url = url;
+
         const type = firstClone.querySelector(".type");
         type.textContent = element.objectType;
+
+
+        const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadgroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
+        firstClone.querySelector(".dynamic-group").dataset.url = url;
+       
         root.appendChild(firstClone);
     });
 
     document.querySelectorAll(".dynamic-group").forEach((x) => {
         x.addEventListener('click', (event) => {
-            createNewTab(event.target.dataset.url);
+            let url = event.target?.dataset.url;
+            if(url == null) { 
+                url = event.target.closest(".dynamic-group")?.dataset?.url;
+            }
+            createNewTab(url);
         });
     });
 
