@@ -1,32 +1,39 @@
+(async () => {
+    await execute();
+})();
 
-chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+async function getTab() {
+    return new Promise((resolve, rject) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, function ([tab]) {
+            // Pass any observed errors down the promise chain.
+            if (chrome.runtime.lastError) {
+                return reject(chrome.runtime.lastError);
+            }
+            resolve(tab.url);
+        });
+    });
+}
 
-    var parts = ResourceBuilder.build(tab.url);
+async function execute() {
+    var currentUrl = await getTab();
+    var parts = ResourceBuilder.build(currentUrl);
 
     if (ResourceBuilder.valid(parts)) {
         registerAction("#resource-info", parts?.resource, parts);
         registerAction("#group-info", parts?.group, parts);
 
-        // Test that we have a token
-        chrome.storage.session.get('authToken', function (res) {            
-            if (res.authToken?.token == null) {
-                StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
-            } else {
-                chrome.storage.session.get('authData', function (res) {
-                    if (res.authData?.tenant == null) {
-                        StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
-                    } else {
-                        StateManagement.setStateAvailable();
-                        StateManagement.setLoading(true);
-                        loadGroupResources(parts, evaluateGroups, () => errorCallback(container));
-                    }
-                });
-            }
-        });
+        const hasToken =  await TokenClient.hasAuth();
+        if (hasToken == false) {
+            StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
+        } else {
+            StateManagement.setStateAvailable();
+            StateManagement.setLoading(true);
+            await loadGroupResources(parts, evaluateGroups, () => errorCallback(container));
+        }
     } else {
-        StateManagement.setStateUnavailable(tab.url);
+        StateManagement.setStateUnavailable(currentUrl);
     }
-});
+}
 
 function evaluateGroups(resp) {
 
@@ -35,7 +42,7 @@ function evaluateGroups(resp) {
 
     resp.filter(GroupFilter.filter).forEach(element => {
         const firstClone = template.content.cloneNode(true);
-        
+
         const target = firstClone.querySelector(".target");
         target.textContent = element.displayName;
 
@@ -45,14 +52,14 @@ function evaluateGroups(resp) {
 
         const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadgroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
         firstClone.querySelector(".dynamic-group").dataset.url = url;
-       
+
         root.appendChild(firstClone);
     });
 
     document.querySelectorAll(".dynamic-group").forEach((x) => {
         x.addEventListener('click', (event) => {
             let url = event.target?.dataset.url;
-            if(url == null) { 
+            if (url == null) {
                 url = event.target.closest(".dynamic-group")?.dataset?.url;
             }
             createNewTab(url);
@@ -95,14 +102,15 @@ function errorCallback(container) {
     StateManagement.setLoading(false);
 }
 
-function registerAction(container, data, fullData) {
+async function registerAction(container, data, fullData) {
     if (data) {
         document.querySelector(container).querySelector(".target").innerHTML = data.name;
 
         var clicker = document.querySelector(container);
-        clicker.addEventListener("click", () => {
+        clicker.addEventListener("click", async () => {
             StateManagement.setLoading(true);
-            loadPimResources(data, evaluateResources, () => errorCallback(container));
+            const result = await loadPimResources(data, evaluateResources, () => errorCallback(container));
+            evaluateResources(data, result);
         }, false);
 
     } else {
@@ -127,138 +135,42 @@ function navigateToResourcePim(data) {
     createNewTab(url);
 }
 
-// Adheres to RFC 3986
-function fixedEncodeURIComponent(str) {
-    return encodeURIComponent(str).replace(
-        /[!'()*]/g,
-        (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
-    );
-}
+async function loadGroupResources(data, successCallback, errorCallback) {
 
-function buildURL(resourceInfo) {
-    var type = "";
-    if (resourceInfo.type == 'resourcegroup') {
-        type = "type eq 'resourcegroup'";
-    } else {
-        type = "type ne 'resourcegroup' and type ne 'managementgroup' and type ne 'subscription'";
+    try {
+        var portalToken = await TokenClient.getPortalToken();        
+        const roleAssignments = await AzureApi.loadRoleAssignments(data, portalToken);
+        const ids = roleAssignments.value.map(x => x.properties.principalId);
+        
+        const graphToken = await TokenClient.getGraphToken();        
+        const tenant = await TokenClient.getTenant();
+        const groups = await AzureApi.loadObjectsByIds(tenant, graphToken, ids);
+        
+        successCallback(groups.value);
+    } 
+    catch(error) {
+        console.error(error);
+        if(errorCallback) {
+            errorCallback();
+        } else {
+            StateManagement.setError();
+        }
     }
 
-    let filter = `(${type}) and (originTenantId ne '00000000-0000-0000-0000-00000000000') and (contains(tolower(displayName),'${resourceInfo.name.toLocaleLowerCase()}'))`;
-    let encodedFilter = fixedEncodeURIComponent(filter);
-
-    let url = `https://api.azrbac.mspim.azure.com/api/v2/privilegedAccess/azureResources/resources?$select=id,displayName,type,externalId&$expand=parent&$filter=(${encodedFilter})&$top=10`;
-
-    return url;
 }
 
-function loadGraphDelegationToken(tokenData) {
-    return fetch('https://portal.azure.com/api/DelegationToken', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            "authority": "portal.azure.com",
-            "method": "POST",
-            "path": "/api/DelegationToken",
-            "scheme": "https",
-            "accept": "application/json, text/javascript, */*; q=0.01",
-            "accept-encoding": "gzip, deflate, br",
-            "accept-language": "en",
-            "origin": "https://portal.azure.com",
-            "referer": "https://portal.azure.com/",
-            "x-requested-with": "XMLHttpRequest"
-        },
-        body: JSON.stringify({
-            'extensionName': 'Microsoft_Azure_AD',
-            'resourceName': 'graph',
-            'tenant': `${tokenData.tenant}`,
-            'portalAuthorization': `${tokenData.portalAuthorization}`,
-            'altPortalAuthorization': `${tokenData.altPortalAuthorization}`
-        })
-    })
-        .then(response => response.json());
-}
+async function loadPimResources(resourceInfo, successCallback, errorCallback) {
 
-function loadRoleAssignments(data, token) {
-    var url = `https://management.azure.com/subscriptions/${data.subscription.name}/resourceGroups/${data.group.name}/providers/${encodeURIComponent(data.resource.subtype)}/${data.resource.name}/providers/Microsoft.Authorization/roleAssignments?$filter=atScope()&api-version=2020-04-01-preview`;
-    return fetch(url, {
-        headers: { Authorization: token, 'Access-Control-Allow-Origin': '*' }
-    })
-        .then(resp => resp.json());
-}
+    var token = await TokenClient.getPortalToken();
 
-function loadObjectsByIds(tenant, altToken, ids) {
-    return fetch(`https://graph.windows.net/${tenant}/getObjectsByObjectIds`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: altToken,
-            "api-version": "1.61-internal"
-        },
-        body: JSON.stringify({
-            includeDirectoryObjectReferences: true,
-            objectIds: ids
-        })
-    })
-        .then(response => response.json());
-}
-
-function loadGroupResources(data, successCallback, errorCallback) {
-    chrome.storage.session.get('authData', function (res) {
-        loadGraphDelegationToken(res.authData)
-            .then(response => {
-                const tenant = res.authData.tenant;
-                const altToken = response.value.authHeader;
-
-                chrome.storage.session.get('authToken', function (res) {
-                    var token = res.authToken.token;
-
-                    loadRoleAssignments(data, token)
-                        .then(resp => {
-                            if (resp.error == undefined) {
-                                const ids = resp.value.map(x => x.properties.principalId);
-
-                                loadObjectsByIds(tenant, altToken, ids)
-                                    .then(response => {
-                                        const results = response.value.map(x => x.displayName);
-                                        successCallback(response.value);
-                                    });
-                            } else {
-                                console.error("Got an error => ", resp);
-                                errorCallback();
-                            }
-                        }, err => {
-                            console.error("Got an error => ", err);
-                            errorCallback();
-                        });
-                });
-            }, err => {
-                console.error("Got an error => ", err);
-                errorCallback();
-            });
-    });
-}
-
-function loadPimResources(resourceInfo, successCallback, errorCallback) {
-
-    chrome.storage.session.get('authToken', function (res) {
-        var url = buildURL(resourceInfo);
-        var token = res.authToken.token;
-
-        fetch(url, {
-            headers: { Authorization: token }
-        })
-            .then(resp => resp.json())
-            .then(resp => {
-                if (resp.error == undefined) {
-                    successCallback(resourceInfo, resp);
-                } else {
-                    console.error("Got an error => ", resp);
-                    errorCallback();
-                }
-
-            }, err => {
-                console.error("Got an error => ", err);
-                errorCallback();
-            });
-    });
+    try {
+        return await AzureApi.getResource(resourceInfo, token);
+    } catch(error) {
+        console.error(error);
+        if(errorCallback) {
+            errorCallback();
+        } else {
+            StateManagement.setError();
+        }
+    }
 }

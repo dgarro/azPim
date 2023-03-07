@@ -3,9 +3,11 @@
 
 <head>
     <link rel="stylesheet" href="button.css">
+    <script src="lib/token-client.js"></script>
     <script src="lib/state-management.js"></script>
     <script src="lib/resource-builder.js"></script>
     <script src="lib/group-filter.js"></script>
+    <script src="lib/azure-api.js"></script>
     <script src="popup.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css"
         integrity="sha512-rSWTr6dChYCbhpHaT1hg2tf4re2jUxBWTuZbujxKg96+T87KQJriMzBzW5aqcb8jmzBhhNSx4XYGA6/Y+ok1vQ=="
@@ -51,6 +53,13 @@
                 <div>
                     Waiting to view resource...
                 </div>               
+            </div>
+        </div>
+        <div id="error-container">
+            <div class="flex center" id="error">
+                <div>
+                    Error While Processing
+                </div>
             </div>
         </div>
     </div>

@@ -1,3 +1,8 @@
+
+importScripts("./lib/token-management.js", "./lib/azure-api.js");
+
+const tokenMgmt = new TokenManagement();
+
 chrome.webRequest.onSendHeaders.addListener(
   function (info) {
     if (info.requestHeaders) {
@@ -8,7 +13,7 @@ chrome.webRequest.onSendHeaders.addListener(
               'token': info.requestHeaders[i].value
             }
           };
-          chrome.storage.session.set(data);
+          tokenMgmt.savePortalToken(data.authToken);
           break;
         }
       }
@@ -34,7 +39,7 @@ chrome.webRequest.onBeforeRequest.addListener(
           'tenant': body.tenant
         }
       };
-      chrome.storage.session.set(data);
+      tokenMgmt.saveAuthData(data.authData);
     }
   },
   // filters

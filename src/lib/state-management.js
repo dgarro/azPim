@@ -7,12 +7,21 @@ const StateManagement = (function () {
         setPim(true);
         setLoading(false);
         setUnavailable(false);
+        setError(false);
     }
 
     function setStateUnavailable(url) {
         setPim(false);
         setLoading(false);
         setUnavailable(true, url);
+        setError(false);
+    }
+
+    function setStateError() {
+        setPim(false);
+        setLoading(false);
+        setUnavailable(false);
+        setError(true);
     }
     
     function setUnavailable(state, url) {
@@ -30,6 +39,11 @@ const StateManagement = (function () {
                 });
             }
         }
+    }
+
+
+    function setError(state) {
+        setVisible('#error-container', state);
     }
 
     function setOverlayMessage(message) {
@@ -59,6 +73,7 @@ const StateManagement = (function () {
     return {
         setStateAvailable: setStateAvailable,
         setStateUnavailable: setStateUnavailable,
+        setError: setStateError,
         setLoading: setLoading,
         setVisible: setVisible,
         setOverlayMessage: setOverlayMessage
