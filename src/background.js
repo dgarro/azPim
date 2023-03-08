@@ -1,45 +1,50 @@
 
 importScripts("./lib/token-management.js", "./lib/azure-api.js");
 
+// Our one and only Token Management service
 const tokenMgmt = new TokenManagement();
 
-chrome.webRequest.onSendHeaders.addListener(
-  function (info) {
-    if (info.requestHeaders) {
-      for (var i = 0; i < info.requestHeaders.length; i++) {
-        if (info.requestHeaders[i].name?.toLocaleLowerCase() == 'authorization') {
-          let data = {
-            'authToken': {
-              'token': info.requestHeaders[i].value
-            }
-          };
-          tokenMgmt.savePortalToken(data.authToken);
-          break;
-        }
-      }
+// Flag used to indicate when data is being collected
+let isCollecting = false;
+
+/**
+ * Registers a message listener
+ * Mainly used to request data to be collected
+ */
+chrome.runtime.onMessage.addListener(            
+  function(request, sender, sendResponse) { 
+    if(request.request == "collect") {
+      // Only start collecting if we don't have valid tokens
+      isCollecting = tokenMgmt.hasTokens() == false;
     }
-  },
-  // filters
-  {
-    urls: [
-      "https://management.azure.com/*",
-    ]
-  },
-  ["requestHeaders"]);
+    sendResponse(isCollecting);
+    return true;
+  }
+);
 
-
+/**
+ * Register a listener to interogate the body of th Delegation Token request
+ */
 chrome.webRequest.onBeforeRequest.addListener(
   function (info) {
-    if (info.requestBody) {
+    // If the request is made to start collecting AND
+    // we have a ody
+    if (isCollecting && info.requestBody) {
       const body = parseRequestBody(info.requestBody);
-      let data = {
-        'authData': {
-          'altPortalAuthorization': body.altPortalAuthorization,
-          'portalAuthorization': body.portalAuthorization,
-          'tenant': body.tenant
-        }
-      };
-      tokenMgmt.saveAuthData(data.authData);
+      if (body) {
+        // We don't want to over collect - disable the collection flag
+        isCollecting = false;
+
+        let data = {
+          'authData': {
+            'altPortalAuthorization': body.altPortalAuthorization,
+            'portalAuthorization': body.portalAuthorization,
+            'tenant': body.tenant
+          }
+        };
+        // Save the requested data
+        tokenMgmt.saveAuthData(data.authData).then(() => {});
+      }
     }
   },
   // filters
@@ -50,12 +55,15 @@ chrome.webRequest.onBeforeRequest.addListener(
   },
   ["requestBody"]);
 
-
+/**
+ * Parses a JSON requst boy
+ * @param {string} requestBody 
+ * @returns JSON object reprsenting request body
+ */
 function parseRequestBody(requestBody) {
   if (!requestBody.raw) {
     return null;
   }
-
   try {
     const stringBody = String.fromCharCode.apply(
       null,

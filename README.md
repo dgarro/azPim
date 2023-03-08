@@ -21,4 +21,4 @@ _Not yet supported_
 
 ### Notes
 
-* This extension saves authentication tokens and data to session storage.
+* This extension saves authentication tokens in extension memory

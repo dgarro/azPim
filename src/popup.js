@@ -1,8 +1,50 @@
+/**
+ * Main entry point called when the extension loads
+ */
 (async () => {
     await execute();
 })();
 
-async function getTab() {
+/**
+ * Main execution
+ */
+async function execute() {
+    // Get the current tab, and see if we are looking at an Azure resource
+    var currentUrl = await getTab();
+    var parts = ResourceBuilder.build(currentUrl);
+
+    // If we have a valid resource, start processing
+    // Otherwise, update the UI
+    if (ResourceBuilder.valid(parts)) {
+
+        // We have a valid resource - request that the session be started 
+        await TokenClient.startSession();
+
+        // Provided the URL - we can update some aspects of the UI
+        registerAction("#resource-info", parts?.resource);
+        registerAction("#group-info", parts?.group);
+
+        // Make sure we have a valid token
+        // If we don't, it simply may mean the user has to refresh the page and reopen - 
+        // This is intented as part of the "startSession" work flow
+        const hasToken =  await TokenClient.hasAuth();
+        if (hasToken == false) {
+            StateManagement.setOverlayMessage("Please refresh the page and reopen this extension");
+        } else {
+            StateManagement.setStateAvailable();
+            StateManagement.setLoading(true);
+            await loadGroupResources(parts, evaluateGroups);
+        }
+    } else {
+        StateManagement.setStateUnavailable(currentUrl);
+    }
+}
+
+/**
+ * Async function allowwing the current tab to be retreived.
+ * @returns URL of the current active tab
+ */
+ async function getTab() {
     return new Promise((resolve, rject) => {
         chrome.tabs.query({ active: true, currentWindow: true }, function ([tab]) {
             // Pass any observed errors down the promise chain.
@@ -12,27 +54,6 @@ async function getTab() {
             resolve(tab.url);
         });
     });
-}
-
-async function execute() {
-    var currentUrl = await getTab();
-    var parts = ResourceBuilder.build(currentUrl);
-
-    if (ResourceBuilder.valid(parts)) {
-        registerAction("#resource-info", parts?.resource, parts);
-        registerAction("#group-info", parts?.group, parts);
-
-        const hasToken =  await TokenClient.hasAuth();
-        if (hasToken == false) {
-            StateManagement.setOverlayMessage("Temporarily unavailable - Please refresh the Azure page.");
-        } else {
-            StateManagement.setStateAvailable();
-            StateManagement.setLoading(true);
-            await loadGroupResources(parts, evaluateGroups, () => errorCallback(container));
-        }
-    } else {
-        StateManagement.setStateUnavailable(currentUrl);
-    }
 }
 
 function evaluateGroups(resp) {
@@ -102,7 +123,7 @@ function errorCallback(container) {
     StateManagement.setLoading(false);
 }
 
-async function registerAction(container, data, fullData) {
+async function registerAction(container, data) {
     if (data) {
         document.querySelector(container).querySelector(".target").innerHTML = data.name;
 
@@ -142,11 +163,14 @@ async function loadGroupResources(data, successCallback, errorCallback) {
         const roleAssignments = await AzureApi.loadRoleAssignments(data, portalToken);
         const ids = roleAssignments.value.map(x => x.properties.principalId);
         
-        const graphToken = await TokenClient.getGraphToken();        
-        const tenant = await TokenClient.getTenant();
-        const groups = await AzureApi.loadObjectsByIds(tenant, graphToken, ids);
-        
-        successCallback(groups.value);
+        if(ids?.length > 0) {
+            const graphToken = await TokenClient.getGraphToken();        
+            const tenant = await TokenClient.getTenant();
+            const groups = await AzureApi.loadObjectsByIds(tenant, graphToken, ids);            
+            successCallback(groups.value);
+        } else {
+            successCallback([]);
+        }
     } 
     catch(error) {
         console.error(error);

@@ -9,7 +9,6 @@
         "declarativeNetRequest"
     ],
     "host_permissions": [        
-        "https://management.azure.com/*",
         "https://portal.azure.com/api/DelegationToken"        
     ],
     "background": {
