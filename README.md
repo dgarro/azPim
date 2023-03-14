@@ -18,3 +18,7 @@ _NOTE Once the extension is loaded, you cannot delete the folder_
 ### Firefox
 
 _Not yet supported_
+
+### Notes
+
+* This extension saves authentication tokens in extension memory

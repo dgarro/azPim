@@ -1,14 +1,15 @@
 {
     "name": "azPim",
     "description": "Allows quick access to PIM for Azure Resources",
-    "version": "1.5",
+    "version": "2.0",
     "permissions": [
         "storage",
         "activeTab",
-        "webRequest"
+        "webRequest",
+        "declarativeNetRequest"
     ],
     "host_permissions": [        
-        "https://management.azure.com/*"        
+        "https://portal.azure.com/api/DelegationToken"        
     ],
     "background": {
         "service_worker": "background.js"
