@@ -5,6 +5,14 @@
  */
 const AzureApi = (function () {
     
+    /**
+     * Requests an auth token for the provided resource
+     * @param {string} resourceName 
+     * @param {string} tenant 
+     * @param {string} portalAuth 
+     * @param {stirng}} altPortalAuth 
+     * @returns Promise containing authoriation token
+     */
     async function getDelegationToken(resourceName, tenant, portalAuth, altPortalAuth) {        
         return await fetch('https://portal.azure.com/api/DelegationToken', {
             method: 'POST',
@@ -30,6 +38,12 @@ const AzureApi = (function () {
         .then(handleResult);
     }
 
+    /**
+     * Loads requested role assignments for the provided resource data
+     * @param {JSON} data 
+     * @param {string} token 
+     * @returns Promise with groups
+     */
     async function loadRoleAssignments(data, token) {
 
         let url = null;
@@ -44,6 +58,13 @@ const AzureApi = (function () {
         .then(handleResult);
     }
 
+    /**
+     * Loads details provided a listing of object ID's
+     * @param {string} tenant 
+     * @param {string} authToken 
+     * @param {array} ids 
+     * @returns 
+     */
     async function loadObjectsByIds(tenant, authToken, ids) {
         const url = `https://graph.windows.net/${tenant}/getObjectsByObjectIds`
         return fetch(url, {
@@ -61,16 +82,25 @@ const AzureApi = (function () {
         .then(handleResult);
     }
 
+    /**
+     * Searches for available PIM resources
+     * @param {object} resourceInfo 
+     * @param {string} token 
+     * @returns Promise with PIM data
+     */
     async function getResource(resourceInfo, token) {
-        var url = buildURL(resourceInfo);
-
-        
-    return fetch(url, {
-        headers: { Authorization: token }
-    })
-    .then(handleResult);
+        var url = buildURL(resourceInfo); 
+        return fetch(url, {
+            headers: { Authorization: token }
+        })
+        .then(handleResult);
     }
     
+    /**
+     * Formats the PIM query string
+     * @param {object} resourceInfo 
+     * @returns URl 
+     */
     function buildURL(resourceInfo) {
         var type = "";
         if (resourceInfo.type == 'resourcegroup') {

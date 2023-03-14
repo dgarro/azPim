@@ -21,8 +21,8 @@ async function execute() {
         await TokenClient.startSession();
 
         // Provided the URL - we can update some aspects of the UI
-        registerAction("#resource-info", parts?.resource);
-        registerAction("#group-info", parts?.group);
+        registerPimAction("#resource-info", parts?.resource);
+        registerPimAction("#group-info", parts?.group);
 
         // Make sure we have a valid token
         // If we don't, it simply may mean the user has to refresh the page and reopen - 
@@ -56,11 +56,16 @@ async function execute() {
     });
 }
 
+/**
+ * Provided a listing of available groups, builds URL's to access the requested PIM resource 
+ * @param {array} Array of groups
+ */
 function evaluateGroups(resp) {
 
     const root = document.querySelector("#pim-container");
     const template = document.getElementById("group-container");
 
+    // For each gropu, grab the template, fill in the missing parts and output the UI
     resp.filter(GroupFilter.filter).forEach(element => {
         const firstClone = template.content.cloneNode(true);
 
@@ -77,6 +82,7 @@ function evaluateGroups(resp) {
         root.appendChild(firstClone);
     });
 
+    // Handle the onClick event
     document.querySelectorAll(".dynamic-group").forEach((x) => {
         x.addEventListener('click', (event) => {
             let url = event.target?.dataset.url;
@@ -90,7 +96,13 @@ function evaluateGroups(resp) {
     StateManagement.setLoading(false);
 }
 
-function evaluateResources(resourceInfo, resp) {
+/**
+ * Provided the results of a PIM serach query, determines the most appopiate
+ * result to navigate the user to
+ * @param {*} resourceInfo 
+ * @param {*} resp Array of results 
+ */
+function evaluatePimResources(resourceInfo, resp) {
     var data = resp.value;
     if (data.length === 0) {
         // If we don't return any items, goto the PIM page
@@ -118,20 +130,29 @@ function evaluateResources(resourceInfo, resp) {
     }
 }
 
+/**
+ * 
+ * @param {*} container 
+ */
 function errorCallback(container) {
     document.querySelector(container).classList.add("error");
     StateManagement.setLoading(false);
 }
 
-async function registerAction(container, data) {
+/**
+ * When the users clicks on a PIM related action
+ * @param {string} container Container to attatch click event to 
+ * @param {JSON} data Associated data
+ */
+async function registerPimAction(container, data) {
     if (data) {
         document.querySelector(container).querySelector(".target").innerHTML = data.name;
 
         var clicker = document.querySelector(container);
         clicker.addEventListener("click", async () => {
             StateManagement.setLoading(true);
-            const result = await loadPimResources(data, evaluateResources, () => errorCallback(container));
-            evaluateResources(data, result);
+            const result = await loadPimResources(data, () => errorCallback(container));
+            evaluatePimResources(data, result);
         }, false);
 
     } else {
@@ -139,31 +160,54 @@ async function registerAction(container, data) {
     }
 }
 
+/**
+ * Opens the Azure portal
+ */
 function openAzure() {
     createNewTab("https://portal.azure.com");
 }
 
+/**
+ * Creates a new tab
+ * @param {*} url 
+ */
 function createNewTab(url) {
     chrome.tabs.create({ active: true, url: url });
 }
 
+/**
+ * Opesn the generic PIM search
+ */
 function navigateToGenericPim() {
     createNewTab("https://portal.azure.com/#view/Microsoft_Azure_PimCommon/CommonMenuBlade/~/quickStart");
 }
 
+/**
+ * 
+ * @param {*} data 
+ */
 function navigateToResourcePim(data) {
     const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${data.id}/resourceType/${encodeURIComponent(data.type)}/provider/azurerbac`;
     createNewTab(url);
 }
 
+/**
+ * Loads all available groups/roles for a given resource
+ * @param {*} data 
+ * @param {*} successCallback 
+ * @param {*} errorCallback 
+ */
 async function loadGroupResources(data, successCallback, errorCallback) {
 
     try {
+        // Get the generic portal token
         var portalToken = await TokenClient.getPortalToken();        
+        // Get available role assignments
         const roleAssignments = await AzureApi.loadRoleAssignments(data, portalToken);
         const ids = roleAssignments.value.map(x => x.properties.principalId);
         
         if(ids?.length > 0) {
+            // Loads data for each role
             const graphToken = await TokenClient.getGraphToken();        
             const tenant = await TokenClient.getTenant();
             const groups = await AzureApi.loadObjectsByIds(tenant, graphToken, ids);            
@@ -183,7 +227,14 @@ async function loadGroupResources(data, successCallback, errorCallback) {
 
 }
 
-async function loadPimResources(resourceInfo, successCallback, errorCallback) {
+/**
+ * Searches the PIM interface for a given resource
+ * @param {*} resourceInfo 
+ * @param {*} successCallback 
+ * @param {*} errorCallback 
+ * @returns 
+ */
+async function loadPimResources(resourceInfo, errorCallback) {
 
     var token = await TokenClient.getPortalToken();
 
