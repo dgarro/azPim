@@ -1,7 +1,21 @@
 /**
  * Main entry point called when the extension loads
  */
+
+settings = {
+    resources: true,
+    resourcegroups: true,
+    groups: true,
+    groupsFilter: ""
+};
+
+
 (async () => {
+
+    const opts = await chrome.storage.sync.get(['resources', 'resourcegroups','groups','groupsFilter']);
+    settings = {...settings, ...opts};
+    console.log(settings);
+
     await execute();
 })();
 
@@ -20,9 +34,12 @@ async function execute() {
         // We have a valid resource - request that the session be started 
         await TokenClient.startSession();
 
-        // Provided the URL - we can update some aspects of the UI
-        registerPimAction("#resource-info", parts?.resource);
-        registerPimAction("#group-info", parts?.group);
+        if(settings.resources) {
+            addResource(parts?.resource);            
+        }
+        if(settings.resourcegroups) {
+            addResource(parts?.group);
+        }
 
         // Make sure we have a valid token
         // If we don't, it simply may mean the user has to refresh the page and reopen - 
@@ -33,7 +50,11 @@ async function execute() {
         } else {
             StateManagement.setStateAvailable();
             StateManagement.setLoading(true);
-            await loadGroupResources(parts, evaluateGroups);
+            if(settings.groups) {
+                await loadGroupResources(parts, addGroups);
+            }
+            
+            StateManagement.setLoading(false);
         }
     } else {
         StateManagement.setStateUnavailable(currentUrl);
@@ -56,45 +77,6 @@ async function execute() {
     });
 }
 
-/**
- * Provided a listing of available groups, builds URL's to access the requested PIM resource 
- * @param {array} Array of groups
- */
-function evaluateGroups(resp) {
-
-    const root = document.querySelector("#pim-container");
-    const template = document.getElementById("group-container");
-
-    // For each gropu, grab the template, fill in the missing parts and output the UI
-    resp.filter(GroupFilter.filter).forEach(element => {
-        const firstClone = template.content.cloneNode(true);
-
-        const target = firstClone.querySelector(".target");
-        target.textContent = element.displayName;
-
-        const type = firstClone.querySelector(".type");
-        type.textContent = element.objectType;
-
-
-        const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadgroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
-        firstClone.querySelector(".dynamic-group").dataset.url = url;
-
-        root.appendChild(firstClone);
-    });
-
-    // Handle the onClick event
-    document.querySelectorAll(".dynamic-group").forEach((x) => {
-        x.addEventListener('click', (event) => {
-            let url = event.target?.dataset.url;
-            if (url == null) {
-                url = event.target.closest(".dynamic-group")?.dataset?.url;
-            }
-            createNewTab(url);
-        });
-    });
-
-    StateManagement.setLoading(false);
-}
 
 /**
  * Provided the results of a PIM serach query, determines the most appopiate
@@ -102,7 +84,8 @@ function evaluateGroups(resp) {
  * @param {*} resourceInfo 
  * @param {*} resp Array of results 
  */
-function evaluatePimResources(resourceInfo, resp) {
+function navigatePimResource(resourceInfo, resp) {
+
     var data = resp.value;
     if (data.length === 0) {
         // If we don't return any items, goto the PIM page
@@ -133,10 +116,35 @@ function evaluatePimResources(resourceInfo, resp) {
 /**
  * 
  * @param {*} container 
- */
-function errorCallback(container) {
-    document.querySelector(container).classList.add("error");
+ */ 
+function errorCallback(container) {    
+    container.classList.add("error");
     StateManagement.setLoading(false);
+}
+
+/**
+ * Registers Actions
+ * @param {*} name 
+ * @param {*} displayType 
+ * @param {*} data 
+ * @param {*} event 
+ */
+async function registerAction(name, displayType, data, event) {
+    const root = document.querySelector("#pim-container");
+    const template = document.getElementById("group-container");
+
+    const clone = template.content.cloneNode(true);
+
+    const target = clone.querySelector(".target");
+    target.textContent = name;
+
+    const type = clone.querySelector(".type");
+    type.textContent = displayType;
+
+    const grp = clone.querySelector('.dynamic-group');
+    grp.addEventListener("click", () => event(data, grp), false);
+
+    root.appendChild(clone);
 }
 
 /**
@@ -144,51 +152,39 @@ function errorCallback(container) {
  * @param {string} container Container to attatch click event to 
  * @param {JSON} data Associated data
  */
-async function registerPimAction(container, data) {
-    if (data) {
-        document.querySelector(container).querySelector(".target").innerHTML = data.name;
+async function addResource(data) {
 
-        var clicker = document.querySelector(container);
-        clicker.addEventListener("click", async () => {
-            StateManagement.setLoading(true);
-            const result = await loadPimResources(data, () => errorCallback(container));
-            evaluatePimResources(data, result);
-        }, false);
+    registerAction(data.name, data.displayType, data, async (input, grp) => {
+        StateManagement.setLoading(true);
+        const result = await loadPimResources(input, () => errorCallback(grp));            
+        naviatePimResource(input, result);
+    });
+}
 
-    } else {
-        StateManagement.setVisible(container, false);
+
+/**
+ * Provided a listing of available groups, builds URL's to access the requested PIM resource 
+ * @param {array} Array of groups
+ */
+ function addGroups(resp) {
+
+    // For each gropu, grab the template, fill in the missing parts and output the UI
+    var filter = (x) => true;
+    if(settings.groupsFilter?.length > 0) {
+        const regex = new RegExp(settings.groupsFilter, "i");
+        filter = (x) => {
+            const isMatch = regex.test(x.displayName);
+            return isMatch;
+        }
     }
-}
 
-/**
- * Opens the Azure portal
- */
-function openAzure() {
-    createNewTab("https://portal.azure.com");
-}
+    resp.filter(filter).forEach(data => {
 
-/**
- * Creates a new tab
- * @param {*} url 
- */
-function createNewTab(url) {
-    chrome.tabs.create({ active: true, url: url });
-}
-
-/**
- * Opesn the generic PIM search
- */
-function navigateToGenericPim() {
-    createNewTab("https://portal.azure.com/#view/Microsoft_Azure_PimCommon/CommonMenuBlade/~/quickStart");
-}
-
-/**
- * 
- * @param {*} data 
- */
-function navigateToResourcePim(data) {
-    const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${data.id}/resourceType/${encodeURIComponent(data.type)}/provider/azurerbac`;
-    createNewTab(url);
+        registerAction(data.displayName, data.objectType, data, (input, grp) => {
+            StateManagement.setLoading(true);
+            navigateToGroupPim(input);
+        });        
+    });
 }
 
 /**
@@ -248,4 +244,45 @@ async function loadPimResources(resourceInfo, errorCallback) {
             StateManagement.setError();
         }
     }
+}
+
+
+/**
+ * Opens the Azure portal
+ */
+ function openAzure() {
+    createNewTab("https://portal.azure.com");
+}
+
+/**
+ * Creates a new tab
+ * @param {*} url 
+ */
+function createNewTab(url) {    
+    chrome.tabs.create({ active: true, url: url });
+}
+
+/**
+ * Opesn the generic PIM search
+ */
+function navigateToGenericPim() {
+    createNewTab("https://portal.azure.com/#view/Microsoft_Azure_PimCommon/CommonMenuBlade/~/quickStart");
+}
+
+/**
+ * 
+ * @param {*} data 
+ */
+function navigateToResourcePim(data) {
+    const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${data.id}/resourceType/${encodeURIComponent(data.type)}/provider/azurerbac`;
+    createNewTab(url);
+}
+
+/**
+ * 
+ * @param {*} data 
+ */
+function navigateToGroupPim(element) {
+    const url = `https://portal.azure.com/#view/Microsoft_Azure_PIMCommon/ResourceMenuBlade/~/MyActions/resourceId/${element.objectId}/resourceType/Security/provider/aadgroup/resourceDisplayName/${encodeURIComponent(element.displayName)}/resourceExternalId/${element.objectId}`;
+    createNewTab(url);
 }
