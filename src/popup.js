@@ -6,15 +6,23 @@ settings = {
     resources: true,
     resourcegroups: true,
     groups: true,
-    groupsFilter: ""
+    groupsFilter: "",
+    otherRoles: false,
+    otherRolesFilter: ""
 };
 
 
 (async () => {
 
-    const opts = await chrome.storage.sync.get(['resources', 'resourcegroups','groups','groupsFilter']);
-    settings = {...settings, ...opts};
-    console.log(settings);
+    const opts = await chrome.storage.sync.get(['resources', 'resourcegroups', 'groups', 'groupsFilter', 'otherRoles', 'otherRolesFilter']);
+    settings = { ...settings, ...opts };
+
+
+    var element = document.getElementById('options');
+    element.addEventListener("click", () => {
+        chrome.runtime.openOptionsPage()
+        });
+    
 
     await execute();
 })();
@@ -34,30 +42,54 @@ async function execute() {
         // We have a valid resource - request that the session be started 
         await TokenClient.startSession();
 
-        if(settings.resources) {
-            addResource(parts?.resource);            
-        }
-        if(settings.resourcegroups) {
-            addResource(parts?.group);
-        }
-
         // Make sure we have a valid token
         // If we don't, it simply may mean the user has to refresh the page and reopen - 
         // This is intented as part of the "startSession" work flow
-        const hasToken =  await TokenClient.hasAuth();
+        const hasToken = await TokenClient.hasAuth();
         if (hasToken == false) {
-            StateManagement.setOverlayMessage("Please refresh the page and reopen this extension");
+            StateManagement.setOverlayMessage("Please refresh the page and reopen AzPim");
         } else {
             StateManagement.setStateAvailable();
             StateManagement.setLoading(true);
-            if(settings.groups) {
-                await loadGroupResources(parts, addGroups);
+
+            if (settings.resources) {
+                addResource(parts?.resource);
             }
-            
-            StateManagement.setLoading(false);
+            if (settings.resourcegroups) {
+                addResource(parts?.group);
+            }
+
+            let groupsAdded = false;
+            if (settings.groups || settings.otherRoles) {
+                groupsAdded = await loadGroupResources(parts, addGroups);
+            }
+            groupsAdded = settings.resources || settings.resourcegroups || groupsAdded;
+            if (groupsAdded == false) {
+                StateManagement.setOverlayMessage("Nothing to PIM to");
+            } else {
+                StateManagement.setLoading(false);
+            }
         }
     } else {
-        StateManagement.setStateUnavailable(currentUrl);
+        showUnavailableMessage(currentUrl);
+    }
+}
+
+/**
+ * Display an unavailable message based on the url
+ */
+function showUnavailableMessage(url) {
+    var isAzure = url.indexOf("portal.azure") >= 0;
+    if (!isAzure) {
+        const template = document.getElementById("link-azure-template");
+        StateManagement.setOverlayMessage(template.innerHTML);
+        var element = document.getElementById('open-azure');
+        element.addEventListener("click", () => {
+            openAzure();
+        });
+
+    } else {
+        StateManagement.setOverlayMessage("Waiting to view resource...");
     }
 }
 
@@ -65,7 +97,7 @@ async function execute() {
  * Async function allowwing the current tab to be retreived.
  * @returns URL of the current active tab
  */
- async function getTab() {
+async function getTab() {
     return new Promise((resolve, rject) => {
         chrome.tabs.query({ active: true, currentWindow: true }, function ([tab]) {
             // Pass any observed errors down the promise chain.
@@ -116,8 +148,8 @@ function navigatePimResource(resourceInfo, resp) {
 /**
  * 
  * @param {*} container 
- */ 
-function errorCallback(container) {    
+ */
+function errorCallback(container) {
     container.classList.add("error");
     StateManagement.setLoading(false);
 }
@@ -131,7 +163,7 @@ function errorCallback(container) {
  */
 async function registerAction(name, displayType, data, event) {
     const root = document.querySelector("#pim-container");
-    const template = document.getElementById("group-container");
+    const template = document.getElementById("group-container-template");
 
     const clone = template.content.cloneNode(true);
 
@@ -156,7 +188,7 @@ async function addResource(data) {
 
     registerAction(data.name, data.displayType, data, async (input, grp) => {
         StateManagement.setLoading(true);
-        const result = await loadPimResources(input, () => errorCallback(grp));            
+        const result = await loadPimResources(input, () => errorCallback(grp));
         naviatePimResource(input, result);
     });
 }
@@ -166,25 +198,31 @@ async function addResource(data) {
  * Provided a listing of available groups, builds URL's to access the requested PIM resource 
  * @param {array} Array of groups
  */
- function addGroups(resp) {
+function addGroups(resp) {
 
-    // For each gropu, grab the template, fill in the missing parts and output the UI
-    var filter = (x) => true;
-    if(settings.groupsFilter?.length > 0) {
-        const regex = new RegExp(settings.groupsFilter, "i");
-        filter = (x) => {
-            const isMatch = regex.test(x.displayName);
-            return isMatch;
+    let groupsAdded = false;
+    let groupRegEx = settings.groups && settings.groupsFilter?.length > 0 ? new RegExp(settings.groupsFilter, "i") : null;
+    let rolesRegEx = settings.otherRoles && settings.otherRolesFilter?.length > 0 ? new RegExp(settings.otherRolesFilter, "i") : null;
+
+    let groupAndRoleFilter = (x) => {
+        if (settings.groups && x.objectType == 'Group') {
+            return groupRegEx == null || groupRegEx.test(x.displayName);
+        } else if (settings.otherRoles && x.objectType != 'Group') {
+            return rolesRegEx == null || rolesRegEx.test(x.displayName);
         }
+        return false;
     }
 
-    resp.filter(filter).forEach(data => {
 
+    resp.filter(groupAndRoleFilter).forEach(data => {
         registerAction(data.displayName, data.objectType, data, (input, grp) => {
             StateManagement.setLoading(true);
             navigateToGroupPim(input);
-        });        
+            groupsAdded = true;
+        });
     });
+
+    return groupsAdded;
 }
 
 /**
@@ -195,32 +233,34 @@ async function addResource(data) {
  */
 async function loadGroupResources(data, successCallback, errorCallback) {
 
+    let hasResources = false;
+
     try {
         // Get the generic portal token
-        var portalToken = await TokenClient.getPortalToken();        
+        var portalToken = await TokenClient.getPortalToken();
         // Get available role assignments
         const roleAssignments = await AzureApi.loadRoleAssignments(data, portalToken);
         const ids = roleAssignments.value.map(x => x.properties.principalId);
-        
-        if(ids?.length > 0) {
+
+        if (ids?.length > 0) {
             // Loads data for each role
-            const graphToken = await TokenClient.getGraphToken();        
+            const graphToken = await TokenClient.getGraphToken();
             const tenant = await TokenClient.getTenant();
-            const groups = await AzureApi.loadObjectsByIds(tenant, graphToken, ids);            
-            successCallback(groups.value);
+            const groups = await AzureApi.loadObjectsByIds(tenant, graphToken, ids);
+            hasResources = successCallback(groups.value);
         } else {
-            successCallback([]);
+            hasResources = successCallback([]);
         }
-    } 
-    catch(error) {
+    }
+    catch (error) {
         console.error(error);
-        if(errorCallback) {
+        if (errorCallback) {
             errorCallback();
         } else {
             StateManagement.setError();
         }
     }
-
+    return hasResources;
 }
 
 /**
@@ -236,9 +276,9 @@ async function loadPimResources(resourceInfo, errorCallback) {
 
     try {
         return await AzureApi.getResource(resourceInfo, token);
-    } catch(error) {
+    } catch (error) {
         console.error(error);
-        if(errorCallback) {
+        if (errorCallback) {
             errorCallback();
         } else {
             StateManagement.setError();
@@ -250,7 +290,7 @@ async function loadPimResources(resourceInfo, errorCallback) {
 /**
  * Opens the Azure portal
  */
- function openAzure() {
+function openAzure() {
     createNewTab("https://portal.azure.com");
 }
 
@@ -258,7 +298,7 @@ async function loadPimResources(resourceInfo, errorCallback) {
  * Creates a new tab
  * @param {*} url 
  */
-function createNewTab(url) {    
+function createNewTab(url) {
     chrome.tabs.create({ active: true, url: url });
 }
 

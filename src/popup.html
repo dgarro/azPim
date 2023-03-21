@@ -15,8 +15,9 @@
 </head>
 
 <body class="flex">
-    <div class="header">
+    <div class="header flex-row space-between">
         <h1><span class="off-color">Az</span>Pim</h1>
+        <div class="vertical-center"><a id="options" href="javascript:void(0)">Options</a></div>
     </div>
     <div class="content-container flex-grow flex center">
         <div id="pim-container">
@@ -30,32 +31,25 @@
             </div>
         </div>
         <div id="unavailable-container">
-            <div class="flex center" id="link-azure">
-                <div>
-                    Currently unavailable
-                </div>
-                <a id="open-azure" href="#" href="javascript:void(0)" onclick="openAzure();">Open Azure</a>
-            </div>
-            <div class="flex center" id="viewing-azure">
-                <div>
-                    Waiting to view resource...
-                </div>               
-            </div>
-        </div>
-        <div id="error-container">
-            <div class="flex center" id="error">
-                <div>
-                    Error While Processing
-                </div>
+            <div class="flex center">
+                Waiting to view resource...             
             </div>
         </div>
     </div>
-    <template id="group-container">
+    <template id="group-container-template">
         <div class="dynamic-group action-container">
             <div class="target">
             </div>
             <div class="type">
             </div>
+        </div>
+    </template>
+    <template id="link-azure-template">
+        <div class="flex center" id="link-azure">
+            <div>
+                Currently unavailable
+            </div>
+            <a id="open-azure" href="javascript:void(0)">Open Azure</a>
         </div>
     </template>
 </body>
