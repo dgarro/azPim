@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="options.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css"
+        integrity="sha512-rSWTr6dChYCbhpHaT1hg2tf4re2jUxBWTuZbujxKg96+T87KQJriMzBzW5aqcb8jmzBhhNSx4XYGA6/Y+ok1vQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <Title>AzPim Options</Title>
+</head>
+
+<body>
+    <div class="header">
+        <h1><span class="off-color">Az</span>Pim</h1> Options
+    </div>
+    <div class="options-container">
+        <div class="flex">
+            <label>
+                <input type="checkbox" id="resources">
+                Enable Resources
+            </label>
+            <label>
+                <input type="checkbox" id="resourcegroups">
+                Enable Resource Groups
+            </label>
+            <label> 
+                <input type="checkbox" id="groups">
+                Enable Groups
+            </label>                        
+            <div style="float:left;">
+                <label style="display:block">Groups Filter</label>
+                <input type="input" id="groupsFilter">
+            </div>    
+            <label> 
+                <input type="checkbox" id="otherRoles">
+                Enable Other Roles (Service Principals, etc)
+            </label> 
+            <div style="float:left;">
+                <label style="display:block">Other Roles Filter</label>
+                <input type="input" id="otherRolesFilter">
+            </div>         
+        </div>
+        <div class="actions">
+            <div id="status"></div>
+            <button id="save">Save</button>
+        </div>
+        <div>
+            <p>Notes</p>
+            <ul>
+                <li>Filters are case-insenstive</li>
+                <li>Exclude groups using ^((?!text_to_exclude).)*$</li>
+            </ul>
+        </div>
+        
+    </div>
+
+
+  
+
+    <script src="options.js"></script>
+</body>
+
+</html>

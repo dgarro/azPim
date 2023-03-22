@@ -1,0 +1,33 @@
+body {
+    padding: 8px;
+}
+
+.options-container {
+    padding: 1rem;
+}
+
+.options-container label {
+    padding: 8px 0px;
+}
+
+.actions {
+    padding: 8px 0px;
+}
+
+input {
+  border: 1px solid #d7d7d7;
+  padding: 4px; 
+  border-radius: 8px;
+
+}
+input:focus-visible {
+    outline: none;
+}
+
+button {
+    background-color: rgb(8, 99, 179);
+    color: white;
+    border-radius: 5px;
+    border: 1px solid #d7d7d7;
+    padding: 8px;
+}
