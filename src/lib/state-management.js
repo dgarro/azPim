@@ -12,28 +12,25 @@ const StateManagement = (function () {
         setPim(true);
         setLoading(false);
         setUnavailable(false);
-        setError(false);
     }
 
     /**
      * Sets the UI to an unavailable state
      * @param {string} url of the current tab
      */
-    function setStateUnavailable(url) {
+    function setStateUnavailable(message) {
         setPim(false);
         setLoading(false);
-        setUnavailable(true, url);
-        setError(false);
+        setUnavailable(true, message);
     }
 
     /**
      * Sets the error state
      */
-    function setStateError() {
+    function setStateError(message) {
         setPim(false);
         setLoading(false);
-        setUnavailable(false);
-        setError(true);
+        setUnavailable(true, message ?? "Error While Processing");
     }
     
     /**
@@ -42,29 +39,14 @@ const StateManagement = (function () {
      * @param {boolean} state Sets the unavailable state
      * @param {*} url URL to evaluate
      */
-    function setUnavailable(state, url) {
+    function setUnavailable(state, message) {
         setVisible('#unavailable-container', state);
     
-        if (state) {
-            // If we are NOT viewing an Azure site, provide a link
-            var isAzure = url.indexOf("portal.azure") >= 0;
-            setVisible("#link-azure", !isAzure);
-            setVisible("#viewing-azure", isAzure);
-    
-            if (!isAzure) {
-                var clicker = document.getElementById('open-azure');
-                clicker.addEventListener("click", () => {
-                    openAzure();
-                });
-            }
+        if (state) {            
+            if(message) {
+                document.querySelector('#unavailable-container > div').innerHTML = (message);
+            }                
         }
-    }
-
-    /**
-     * Sets the error state
-     */
-    function setError(state) {
-        setVisible('#error-container', state);
     }
 
     /**
@@ -99,7 +81,6 @@ const StateManagement = (function () {
      * @param {boolean} visible 
      */
     function setVisible(id, visible) {
-    
         var display = '';
         if (visible == false) {
             display = 'none';
@@ -111,10 +92,8 @@ const StateManagement = (function () {
     // Revealing module pattern
     return {
         setStateAvailable: setStateAvailable,
-        setStateUnavailable: setStateUnavailable,
         setError: setStateError,
         setLoading: setLoading,
-        setVisible: setVisible,
         setOverlayMessage: setOverlayMessage
     };
 

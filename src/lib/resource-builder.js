@@ -17,7 +17,8 @@ const ResourceBuilder = (function () {
             return {
                 name: parts[1],
                 type: 'resourcegroup',
-                subtype: 'resourcegroup'
+                subtype: 'resourcegroup',
+                displayType: 'Resource Group'
             };
         }
         return null;
@@ -36,7 +37,8 @@ const ResourceBuilder = (function () {
             return {
                 name: parts[1],
                 type: 'subscription',
-                subtype: 'subscription'
+                subtype: 'subscription',
+                displayType: 'Subscription'
             };
         }
         return null;
@@ -54,7 +56,8 @@ const ResourceBuilder = (function () {
             return {
                 name: parts[3],
                 type: 'resource',
-                subtype: `${parts[1]}/${parts[2]}`
+                subtype: `${parts[1]}/${parts[2]}`,
+                displayType: 'Resource'
             };
         }
         return null;
