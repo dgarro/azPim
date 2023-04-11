@@ -65,10 +65,12 @@ function parseRequestBody(requestBody) {
     return null;
   }
   try {
-    const stringBody = String.fromCharCode.apply(
-      null,
-      new Uint8Array(requestBody.raw[0].bytes)
-    );
+    const stringBody = (new Uint8Array(requestBody.raw[0].bytes).reduce(
+      function(data,byte) {
+        return data + String.fromCharCode(byte);
+      },
+      ''
+    ));
     return JSON.parse(stringBody);
   } catch (error) {
     return null;
