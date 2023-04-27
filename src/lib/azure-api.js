@@ -83,6 +83,24 @@ const AzureApi = (function () {
     }
 
     /**
+     * Returns all available tenants for the logged in user
+     * @param {string} authToken
+     * @returns Available tenants
+     */
+    async function getTenant(authToken) {
+        const url = `https://management.azure.com/tenants?api-version=2020-01-01&$includeAllTenantCategories=true`
+        return fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: authToken
+            },
+            body: null
+        })
+        .then(handleResult);
+    }
+
+    /**
      * Searches for available PIM resources
      * @param {object} resourceInfo 
      * @param {string} token 
@@ -148,6 +166,7 @@ const AzureApi = (function () {
         getDelegationToken: getDelegationToken,
         loadRoleAssignments: loadRoleAssignments,
         loadObjectsByIds: loadObjectsByIds,
-        getResource: getResource
+        getResource: getResource,
+        getTenant: getTenant
     };
 })();

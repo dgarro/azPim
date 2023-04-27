@@ -8,7 +8,7 @@
         "webRequest"
     ],
     "host_permissions": [        
-        "https://portal.azure.com/api/DelegationToken"        
+        "https://portal.azure.com/api/Portal/GetEarlyUserData"
     ],
     "background": {
         "service_worker": "background.js"
