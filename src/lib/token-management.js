@@ -40,6 +40,17 @@ const TokenManagement = class {
         );
     }
 
+
+    /**
+     * Returns an authorization token for the given resource
+     * @param {JSON} data Auth Data 
+     * @returns available tenants
+     */
+    getTenantId = async function(data) {
+         const result = await AzureApi.getTenant(data);        
+         return result.value;
+     }
+
     /**
      * When provided with Azure Auth Data - requests tokens to access Graph and General API usage.
      * This approach allows us to move foward without keeping the Auth data around in memory or 
@@ -50,21 +61,26 @@ const TokenManagement = class {
         // If tokens are NOT available, request new ones
         // Otherwise, we have valid tokens
         if(this.hasTokens() == false) {
+        
+            this.getTenantId(data.armAuthorizationHeader).then((tenantData) => {
 
-            this.#tenant = data.tenant;            
-            
-            const graphPromise = this.getDelegationToken("graph", data);
-            const portalPromise = this.getDelegationToken("", data);
-            
-            Promise.all([graphPromise, portalPromise]).then((values) => {
-                this.#graphToken = values[0];
-                this.#portalToken = values[1];
-            }).catch((error) => {
-                console.error(error);
-                this.resetTokens();
+                this.#tenant = tenantData[0].tenantId;
+                data.tenant = this.#tenant;
+
+                const graphPromise = this.getDelegationToken("graph", data);
+                const portalPromise = this.getDelegationToken("", data);
+                
+                Promise.all([graphPromise, portalPromise]).then((values) => {
+                    this.#graphToken = values[0];
+                    this.#portalToken = values[1];
+                }).catch((error) => {
+                    console.error(error);
+                    this.resetTokens();
+                });
             });
         }
     }
+
 
     /**
      * Returns an authorization token for the given resource

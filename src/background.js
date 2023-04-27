@@ -39,7 +39,7 @@ chrome.webRequest.onBeforeRequest.addListener(
           'authData': {
             'altPortalAuthorization': body.altPortalAuthorization,
             'portalAuthorization': body.portalAuthorization,
-            'tenant': body.tenant
+            'armAuthorizationHeader': body.armAuthorizationHeader
           }
         };
         // Save the requested data
@@ -50,7 +50,7 @@ chrome.webRequest.onBeforeRequest.addListener(
   // filters
   {
     urls: [
-      "https://portal.azure.com/api/DelegationToken",
+      "https://portal.azure.com/api/Portal/GetEarlyUserData"
     ]
   },
   ["requestBody"]);
