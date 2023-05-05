@@ -189,7 +189,7 @@ async function addResource(data) {
     registerAction(data.name, data.displayType, data, async (input, grp) => {
         StateManagement.setLoading(true);
         const result = await loadPimResources(input, () => errorCallback(grp));
-        naviatePimResource(input, result);
+        navigatePimResource(input, result);
     });
 }
 
