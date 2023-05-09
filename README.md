@@ -3,6 +3,10 @@
 
 _PIM like a madman_
 
+## NOTE
+
+_This project is NOT affiliated with Microsoft.  Use at your own risk._
+
 ## Installation Instructions
 
 ### Google Chrome / Microsoft Edge
@@ -18,7 +22,3 @@ _NOTE Once the extension is loaded, you cannot delete the folder_
 ### Firefox
 
 _Not yet supported_
-
-### Notes
-
-* This extension saves authentication tokens in extension memory

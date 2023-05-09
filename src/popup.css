@@ -54,6 +54,11 @@ h1 {
   justify-content: center;
 }
 
+.flex-row.end {
+  justify-content: end;
+  align-items: end;
+}
+
 /*
  ********************************************
  * Animations
@@ -76,6 +81,7 @@ h1 {
  */
 .header {
   padding: 1rem;
+  box-shadow: 0 4px 24px 0 rgb(34 41 47 / 15%);
 }
 
 .header h1 {
@@ -90,7 +96,34 @@ h1 {
 #options {
   text-decoration: none;
   color: rgba(0, 0, 0, .3);
+  font-size: 20px;
 }
+
+/*
+ ********************************************
+ * Parts - Footer
+ ********************************************
+ */
+ .footer {
+  padding: 0.5rem 1rem;
+  color: rgba(0, 0, 0, .3);
+  box-shadow: 0 4px 24px 0 rgb(34 41 47 / 30%);
+ }
+
+ .footer .help {
+    color:#fff;
+    background-color:rgba(0, 0, 0, .2);
+    width:12px;
+    height:12px;
+    display:inline-block;
+    border-radius:100%;
+    font-size:10px;
+    text-align:center;
+    text-decoration:none;
+    /* -webkit-box-shadow: inset -1px -1px 1px 0px rgba(0,0,0,0.25);
+    -moz-box-shadow: inset -1px -1px 1px 0px rgba(0,0,0,0.25);
+    box-shadow: inset -1px -1px 1px 0px rgba(0,0,0,0.25); */
+ }
 
 /*
  ********************************************
@@ -98,7 +131,7 @@ h1 {
  ********************************************
  */
 .content-container {
-  position: relative;
+  position: relative;  
 }
 
 /*
@@ -113,7 +146,7 @@ h1 {
   right: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, .3);
+  background: rgba(0, 0, 0, .1);
 }
 
 #loading-container .loading-box {
@@ -140,8 +173,12 @@ h1 {
  ********************************************
  */
 #pim-container {
-  padding: 0.5rem 1rem 1rem 1rem;
+  padding: 1rem 1rem 0rem 1rem;
   min-width: 350px;
+  max-height: 450px;
+  min-height: 80px;
+  overflow-y: auto;
+
 }
 
 .action-container {
@@ -168,3 +205,28 @@ h1 {
 .action-container.error {
   background-color: rgb(227 188 188);
 }
+
+/*
+ *
+ */
+ ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  -webkit-border-radius: 8px;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  -webkit-border-radius: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb:window-inactive {
+  background: rgba(255, 255, 255, 0.3);
+} 
