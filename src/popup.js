@@ -13,10 +13,11 @@ settings = {
 
 
 (async () => {
-
+    
     const opts = await chrome.storage.sync.get(['resources', 'resourcegroups', 'groups', 'groupsFilter', 'otherRoles', 'otherRolesFilter']);
-    settings = { ...settings, ...opts };
+    settings = { ...settings, ...opts };    
 
+    updateVersion();
 
     var element = document.getElementById('options');
     element.addEventListener("click", () => {
@@ -73,6 +74,15 @@ async function execute() {
     } else {
         showUnavailableMessage(currentUrl);
     }
+}
+
+/**
+ * Updates the version on the pop-ui based on the manifest
+ */
+function updateVersion() {
+    const version = chrome.runtime.getManifest().version;
+    const target = document.querySelector("#version");
+    target.textContent = `v${version}`;
 }
 
 /**

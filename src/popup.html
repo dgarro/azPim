@@ -17,7 +17,7 @@
 <body class="flex">
     <div class="header flex-row space-between">
         <h1><span class="off-color">Az</span>Pim</h1>
-        <div class="vertical-center"><a id="options" href="javascript:void(0)">Options</a></div>
+        <div class="vertical-center"><a id="options" href="javascript:void(0)" title="Options"><span>&#9881;</span></a></div>
     </div>
     <div class="content-container flex-grow flex center">
         <div id="pim-container">
@@ -35,6 +35,13 @@
                 Waiting to view resource...             
             </div>
         </div>
+    </div>
+    <div class="footer flex-row space-between">
+        <div>
+            <a class="help" href="https://github.com/dgarro/azpim" target="_blank" title="Help">?</a>
+        </div>
+        <div id="version">            
+        </div>  
     </div>
     <template id="group-container-template">
         <div class="dynamic-group action-container">
