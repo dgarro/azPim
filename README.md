@@ -3,6 +3,14 @@
 
 _PIM like a madman_
 
+Easy access to Privileged Identity Management (PIM) in Azure.
+
+When viewing an Azure Resource, launch the azPim extention to get quick links to the associated PIM resources.
+
+![azPIM](./assets/azPim.jpg)
+
+![Options](./assets/azPimOptions.png)
+
 ## NOTE
 
 _This project is NOT affiliated with Microsoft.  Use at your own risk._
